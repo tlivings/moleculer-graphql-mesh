@@ -1,0 +1,27 @@
+{
+  "name": "graphql-compose",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/index.js",
+  "scripts": {
+    "start": "ts-node test/server",
+    "test": "ts-node node_modules/.bin/tape test/*.ts"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@types/node": "^11.9.4",
+    "graphql": "^14.5.4",
+    "graphql-tag": "^2.10.1",
+    "graphql-toolkit": "^0.5.0",
+    "graphql-tools": "^4.0.5",
+    "moleculer": "^0.13.10",
+    "nats": "^1.0.1"
+  },
+  "devDependencies": {
+    "typescript": "^3.3.3",
+    "apollo-server": "^2.9.0",
+    "tape": "^4.10.1",
+    "ts-node": "^8.0.2"
+  }
+}
