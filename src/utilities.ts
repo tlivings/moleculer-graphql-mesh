@@ -1,41 +1,46 @@
 
 import { IResolvers } from 'graphql-tools';
-import { DocumentNode, parse, ObjectTypeDefinitionNode, GraphQLResolveInfo, FieldNode, OperationDefinitionNode } from 'graphql';
+import { DocumentNode, parse, ObjectTypeDefinitionNode, GraphQLResolveInfo, FieldNode, OperationDefinitionNode, DefinitionNode, Kind } from 'graphql';
 import { mergeTypeDefs, mergeResolvers } from 'graphql-toolkit';
 
-export const createDocument = function (field: string, info: GraphQLResolveInfo) {
+export const createDocument = function (field: string, info: GraphQLResolveInfo): DocumentNode {
   const operation = info.operation as OperationDefinitionNode;
 
-  const mapSelections = function (node) {
-    const selection = node as FieldNode;
+  const selections = operation.selectionSet.selections.filter((node) => node.kind === Kind.FIELD && node.name.value === field);
 
-    if (selection.selectionSet && selection.selectionSet.selections.length) {
-      return `${selection.name.value} {
-        ${selection.selectionSet.selections.map(mapSelections).join(`, `)}
-      }`;
-    }
-
-    return selection.name.value;
+  return {
+    kind: Kind.DOCUMENT,
+    definitions: [
+      {
+        kind: Kind.OPERATION_DEFINITION,
+        operation: operation.operation,
+        variableDefinitions: operation.variableDefinitions,
+        selectionSet: {
+          kind: Kind.SELECTION_SET,
+          selections
+        },
+      }
+    ],
   };
+
+  // const mapSelections = function (node) {
+  //   const selection = node as FieldNode;
+
+  //   if (selection.selectionSet && selection.selectionSet.selections.length) {
+  //     return `${selection.name.value} { ${selection.selectionSet.selections.map(mapSelections).join(`, `)} }`;
+  //   }
+
+  //   return selection.name.value;
+  // };
   
-  const selections = operation.selectionSet.selections.filter((node) => node.kind === 'Field' && node.name.value === field).map(mapSelections);
+  // const selections = operation.selectionSet.selections.filter((node) => node.kind === 'Field' && node.name.value === field).map(mapSelections);
   
-  return `${operation.operation} {
-    ${selections.join(', ')}
-  }`;
+  // return `${operation.operation} { ${selections.join(', ')} }`;
 };
 
 export const createRemoteResolver = function (serviceName: string, rootType: string, field: string) {
   return async function (_, args, context, info) {
-    const operation = `${serviceName}.execute`;
-    
-    // const document = `
-    //   ${rootType.toLowerCase()} {
-    //     ${field} {
-    //       value
-    //     }
-    //   }
-    // `;
+    const operation = `${serviceName}.$execute`;
     
     const input = createDocument(field, info);
     
@@ -43,6 +48,7 @@ export const createRemoteResolver = function (serviceName: string, rootType: str
 
     logger.info(`calling remote action ${operation}`);
 
+    //TODO: how about building the input on the other end?
     try {
       const { data, errors } = await broker.call(operation, {
         input,
@@ -61,24 +67,25 @@ export const createRemoteResolver = function (serviceName: string, rootType: str
   };
 };
 
+export const iterateRootTypes = function *(definitions: readonly DefinitionNode[]): Generator<ObjectTypeDefinitionNode> {
+  for (const definition of definitions) {
+    if (definition.kind === Kind.OBJECT_TYPE_DEFINITION && ['Query', 'Mutation', 'Subscription'].indexOf(definition.name.value) > -1) {
+      yield definition as ObjectTypeDefinitionNode;
+    }
+  }
+};
+
 export const createRemoteDefinition = function (serviceName: string, { types, dependencies }: { types: string, dependencies: string[] }) {
   const typeDefs: DocumentNode  = parse(types);
 
   const resolvers = {};
 
-  for (const definition of typeDefs.definitions) {
-    if (definition.kind === 'ObjectTypeDefinition') {
-      const rootType = definition as ObjectTypeDefinitionNode;
-
-      if (['Query', 'Mutation', 'Subscription'].indexOf(rootType.name.value) < 0) {
-        continue;
-      }
-      if (!resolvers[rootType.name.value]) {
-        resolvers[rootType.name.value] = {};
-      }
-      for (const field of rootType.fields) {
-        resolvers[rootType.name.value][field.name.value] = createRemoteResolver(serviceName, rootType.name.value, field.name.value);
-      }
+  for (const definition of iterateRootTypes(typeDefs.definitions)) {
+    if (!resolvers[definition.name.value]) {
+      resolvers[definition.name.value] = {};
+    }
+    for (const field of definition.fields) {
+      resolvers[definition.name.value][field.name.value] = createRemoteResolver(serviceName, definition.name.value, field.name.value);
     }
   }
 

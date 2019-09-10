@@ -9,11 +9,11 @@ export const $introspect = function () {
   };
 };
 
-export const execute = async function ({ params }) {
+export const $execute = async function ({ params }) {
   const schema = this.graphqlSchema;
 
-  const document = gql(params.input);
-  
+  const document = params.input;
+
   const contextValue = {
     service: this,
     ...params.context
@@ -24,3 +24,8 @@ export const execute = async function ({ params }) {
   return result;
 };
 
+export const $graphql = async function ({ params, ...ctx }) {
+  params.input = gql(params.input);
+
+  return $execute.call(this, { params, ...ctx });
+};

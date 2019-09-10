@@ -1,6 +1,6 @@
 
 import { ServiceBroker } from 'moleculer';
-import { createGraphQLMixin } from '../../src/index';
+import { a, b, c } from '../fixtures';
 
 const broker = new ServiceBroker({
   nodeID: 'test',
@@ -9,94 +9,35 @@ const broker = new ServiceBroker({
   cacher: 'memory'
 });
 
-const graphql1 = createGraphQLMixin({
-  types: `
-    type A {
-      id: ID,
-      value: String
-    }
-    type Query {
-      a: A
-    }
-  `,
-  resolvers: {
-    Query: {
-      a() {
-        return { id: 1, value: 'hello A' };
-      }
-    }
-  }
-});
-
-const graphql2 = createGraphQLMixin({
-  types: `
-    type B {
-      id: ID,
-      value: String
-      a: A
-    }
-    type Query {
-      b: B
-    }
-  `,
-  resolvers: {
-    Query: {
-      b() {
-        return { id: 1, value: 'hello B', a: { id: 1, value: 'fetched A from B' } };
-      }
-    }
-  },
-  dependencies: ['gql1']
-});
-
-const graphql3 = createGraphQLMixin({
-  types: `
-    type C {
-      id: ID,
-      value: String
-    }
-    type Query {
-      c: C
-    }
-  `,
-  resolvers: {
-    Query: {
-      c() {
-        return { id: 1, value: 'hello C' };
-      }
-    }
-  },
-  dependencies: ['gql2']
+broker.createService({
+  name: 'gqlA',
+  mixins: [ a ]
 });
 
 broker.createService({
-  name: 'gql1',
-  mixins: [ graphql1 ]
+  name: 'gqlB',
+  mixins: [ b ]
 });
 
 broker.createService({
-  name: 'gql2',
-  mixins: [ graphql2 ]
-});
-
-broker.createService({
-  name: 'gql3',
-  mixins: [ graphql3 ]
+  name: 'gqlC',
+  mixins: [ c ]
 });
 
 broker.start().then(() => {
-  broker.waitForServices(['gql1', 'gql2', 'gql3']).then(() => {
-    broker.call('gql3.execute', {
+  broker.waitForServices(['gqlA', 'gqlB', 'gqlC']).then(() => {
+    broker.call('gqlC.$graphql', {
       input: `
         query {
           b {
-            id,
-            value,
+            id
+            value
             a {
               value
             }
           }
-          a {
+          a(id: 1) {
+            id
             value
           }
         }
