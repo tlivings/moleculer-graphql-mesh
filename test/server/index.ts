@@ -96,11 +96,14 @@ broker.start().then(() => {
               value
             }
           }
+          a {
+            value
+          }
         }
       `,
       context: {}
     }).then((result) => {
-      console.log(result);
+      console.log(JSON.stringify(result, null, 2));
     });
   });
 
