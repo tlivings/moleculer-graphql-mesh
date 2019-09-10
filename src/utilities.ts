@@ -22,20 +22,6 @@ export const createDocument = function (field: string, info: GraphQLResolveInfo)
       }
     ],
   };
-
-  // const mapSelections = function (node) {
-  //   const selection = node as FieldNode;
-
-  //   if (selection.selectionSet && selection.selectionSet.selections.length) {
-  //     return `${selection.name.value} { ${selection.selectionSet.selections.map(mapSelections).join(`, `)} }`;
-  //   }
-
-  //   return selection.name.value;
-  // };
-  
-  // const selections = operation.selectionSet.selections.filter((node) => node.kind === 'Field' && node.name.value === field).map(mapSelections);
-  
-  // return `${operation.operation} { ${selections.join(', ')} }`;
 };
 
 export const createRemoteResolver = function (serviceName: string, rootType: string, field: string) {
@@ -48,14 +34,13 @@ export const createRemoteResolver = function (serviceName: string, rootType: str
 
     logger.info(`calling remote action ${operation}`);
 
-    //TODO: how about building the input on the other end?
     try {
       const { data, errors } = await broker.call(operation, {
         input,
         context
       });
 
-      //TODO: wtf to do with errors
+      //TODO: handle errors appropriately
 
       return data[field];
     }
