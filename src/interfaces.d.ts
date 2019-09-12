@@ -7,3 +7,9 @@ export interface IResolvers {
     [key: string]: GraphQLFieldResolver<any, any>
   }
 }
+
+export interface ITypeMap { 
+  [service: string]: { 
+    types: string, dependencies: string[] 
+  }
+}
