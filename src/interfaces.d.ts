@@ -9,7 +9,5 @@ export interface IResolvers {
 }
 
 export interface ITypeMap { 
-  [service: string]: { 
-    types: string, dependencies: string[] 
-  }
+  name: string, types: string, dependencies: string[]
 }

@@ -20,6 +20,7 @@ export const createGraphQLMixin = function ({ types, resolvers, dependencies = [
 
   const events = {
     '$graphql.schema.available'(meta: ITypeMap) {
+      this.logger.debug(`received update from ${meta.name}`);
       this.updates.push(meta);
     }
   };
@@ -36,30 +37,47 @@ export const createGraphQLMixin = function ({ types, resolvers, dependencies = [
       this.updates = [];
       this.typeMap = {
         [this.name]: {
-          types: this.metadata.types
+          name: this.name,
+          types: this.metadata.types,
+          dependencies: this.dependencies
         }
       };
+    },
+    async started() {
       this.updateInterval = setInterval(async () => {
+        this.logger.debug('checking for updates');
         if (this.updates.length > 0) {
           this.updateTypeMap();
           this.logger.info(`rebuilding graphql schema`);
+          
           this.graphqlSchema = await this.buildGraphQLSchema();
         }
       }, 10000); //TODO: configurable
-    },
-    async started() {
-      // if (this.metadata.dependencies && this.metadata.dependencies.length > 0) {
-      //   await this.broker.waitForServices(this.metadata.dependencies);
-      // }
+      
+      try {
+        if (this.metadata.dependencies && this.metadata.dependencies.length > 0) {
+          await this.broker.waitForServices(this.metadata.dependencies);
+      
+          this.updates.push(
+            ...(await this.broker.call('$node.services', { onlyAvailable: true, skipInternal: true }))
+                  .filter((service) => service.name !== this.name && service.metadata.types)
+                    .map((service) => ({ name: service.name, ...service.metadata }))
+          );
+          
+          this.updateTypeMap();
+        }
 
-      this.graphqlSchema = await this.buildGraphQLSchema();
+        this.graphqlSchema = await this.buildGraphQLSchema();
 
-      this.broker.emit('$graphql.schema.available', {
-        [this.name]: {
+        this.broker.emit('$graphql.schema.available', {
+          name: this.name,
           types: this.metadata.types,
           dependencies: this.metadata.dependencies
-        }
-      });
+        });
+      }
+      catch (error) {
+        this.logger.error(error);
+      }
     },
     async stopped() {
       this.updateInterval.unref();

@@ -60,7 +60,7 @@ export const iterateRootTypes = function *(definitions: readonly DefinitionNode[
   }
 };
 
-export const createRemoteDefinition = function (serviceName: string, { types, dependencies }: { types: string, dependencies: string[] }) {
+export const createRemoteDefinition = function ({ name, types, dependencies }: { name: string, types: string, dependencies: string[] }) {
   const typeDefs: DocumentNode  = parse(types);
 
   const resolvers = {};
@@ -70,7 +70,7 @@ export const createRemoteDefinition = function (serviceName: string, { types, de
       resolvers[definition.name.value] = {};
     }
     for (const field of definition.fields) {
-      resolvers[definition.name.value][field.name.value] = createRemoteResolver(serviceName, definition.name.value, field.name.value);
+      resolvers[definition.name.value][field.name.value] = createRemoteResolver(name, definition.name.value, field.name.value);
     }
   }
 
@@ -123,6 +123,9 @@ export const mergeDependencies = function (dependencies: string[], map: { [k: st
   };
 
   for (const service of dependencies) {
+    if (!map[service]) {
+      throw new Error(`${service} dependency missing from types`);
+    }
     const result = follow(map[service]);
     
     types.push(...result.types);

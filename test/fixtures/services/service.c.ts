@@ -1,7 +1,7 @@
 
-import { createGraphQLMixin } from '../../src/index';
+import { createGraphQLMixin } from '../../../src/index';
 
-export default createGraphQLMixin({
+const c = createGraphQLMixin({
   types: `
     type C {
       id: ID,
@@ -20,3 +20,8 @@ export default createGraphQLMixin({
   },
   dependencies: ['gqlB']
 });
+
+export = {
+  name: 'gqlC',
+  mixins: [c]
+};
