@@ -7,7 +7,7 @@ import { mapActionsToResolvers } from './utilities';
 export const createGraphQLMixin = function ({ types, resolvers, dependencies = [] }: { types: string, resolvers: IResolvers, dependencies?: Array<any> }): any {
   const settings = {
     graphql: {
-      types, 
+      types,
       resolvers,
       dependencies
     }
@@ -49,25 +49,29 @@ export const createGraphQLMixin = function ({ types, resolvers, dependencies = [
         if (this.updates.length > 0) {
           this.updateTypeMap();
           this.logger.info(`rebuilding graphql schema`);
-          
+
           this.graphqlSchema = await this.buildGraphQLSchema();
+
+          await this.startGateway();
         }
       }, 10000); //TODO: configurable
-      
+
       try {
         if (this.metadata.dependencies && this.metadata.dependencies.length > 0) {
           await this.broker.waitForServices(this.metadata.dependencies);
-      
+
           this.updates.push(
             ...(await this.broker.call('$node.services', { onlyAvailable: true, skipInternal: true }))
-                  .filter((service) => service.name !== this.name && service.metadata.types)
-                    .map((service) => ({ name: service.name, ...service.metadata }))
+              .filter((service) => service.name !== this.name && service.metadata.types)
+              .map((service) => ({ name: service.name, ...service.metadata }))
           );
-          
+
           this.updateTypeMap();
         }
 
         this.graphqlSchema = await this.buildGraphQLSchema();
+
+        await this.startGateway();
 
         this.broker.emit('$graphql.schema.available', {
           name: this.name,
@@ -82,6 +86,8 @@ export const createGraphQLMixin = function ({ types, resolvers, dependencies = [
     async stopped() {
       this.updateInterval.unref();
       clearInterval(this.updateInterval);
+      this.logger.info('stopping gateway...');
+      await this.gateway.stop();
     }
   };
 

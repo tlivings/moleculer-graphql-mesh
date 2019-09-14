@@ -46,7 +46,7 @@ export const createRemoteResolver = function (serviceName: string, rootType: str
     }
     catch (error) {
       const clean = error;
-      delete clean.ctx;
+      delete clean.ctx; //strip off the moleculer circular context
       throw clean;
     }
   };
@@ -101,36 +101,41 @@ export const mapActionsToResolvers = function (resolvers: IResolvers) {
   return actions;
 };
 
-export const mergeDependencies = function (dependencies: string[], map: { [k: string]: { types: any, dependencies: any[] } }) {
+export const mergeDependencies = function (dependencies: string[], map: { [k: string]: { types: any, resolvers: IResolvers, dependencies: any[] } }) {
   const types = [];
   const resolvers = [];
 
-  const follow = function (definition) {
-    const types = [definition.types];
-    const resolvers = [definition.resolvers];
-
-    for (const dependency of definition.dependencies) {
-      const result = follow(map[dependency]);
-
-      types.push(...result.types);
-      resolvers.push(...result.resolvers);
-    }
-
-    return {
-      types, 
-      resolvers
-    };
-  };
-
-  for (const service of dependencies) {
-    if (!map[service]) {
-      throw new Error(`${service} dependency missing from types`);
-    }
-    const result = follow(map[service]);
-    
-    types.push(...result.types);
-    resolvers.push(...result.resolvers);
+  for (const [service, meta] of Object.entries(map)) {
+    types.push(meta.types);
+    resolvers.push(meta.resolvers);
   }
+
+  // const follow = function (definition) {
+  //   const types = [definition.types];
+  //   const resolvers = [definition.resolvers];
+
+  //   for (const dependency of definition.dependencies) {
+  //     const result = follow(map[dependency]);
+
+  //     types.push(...result.types);
+  //     resolvers.push(...result.resolvers);
+  //   }
+
+  //   return {
+  //     types, 
+  //     resolvers
+  //   };
+  // };
+
+  // for (const service of dependencies) {
+  //   if (!map[service]) {
+  //     throw new Error(`${service} dependency missing from types`);
+  //   }
+  //   const result = follow(map[service]);
+    
+  //   types.push(...result.types);
+  //   resolvers.push(...result.resolvers);
+  // }
   
   return {
     types: mergeTypeDefs(types),

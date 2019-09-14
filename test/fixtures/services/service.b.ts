@@ -24,5 +24,10 @@ const b = createGraphQLMixin({
 
 export = {
   name: 'gqlB',
-  mixins: [b]
+  mixins: [b],
+  settings: {
+    graphql: {
+      gatewayPort: 4001
+    }
+  }
 };

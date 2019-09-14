@@ -5,7 +5,8 @@ const a = createGraphQLMixin({
   types: `
     type A {
       id: ID,
-      value: String
+      value: String,
+      hot: String
     }
     type Query {
       a(id: ID): A
@@ -14,7 +15,7 @@ const a = createGraphQLMixin({
   resolvers: {
     Query: {
       a(_, { id }) {
-        return { id, value: 'hello A' };
+        return { id, value: 'hello A', hot: 'hot!' };
       }
     }
   }
@@ -22,5 +23,10 @@ const a = createGraphQLMixin({
 
 export = {
   name: 'gqlA',
-  mixins: [a]
+  mixins: [a],
+  settings: {
+    graphql: {
+      gatewayPort: 4000
+    }
+  }
 };
