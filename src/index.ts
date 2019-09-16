@@ -44,30 +44,16 @@ export const createGraphQLMixin = function ({ types, resolvers, dependencies = [
       };
     },
     async started() {
-      this.updateInterval = setInterval(async () => {
-        this.logger.debug('checking for updates');
-        if (this.updates.length > 0) {
-          this.updateTypeMap();
-          this.logger.info(`rebuilding graphql schema`);
-
-          this.graphqlSchema = await this.buildGraphQLSchema();
-
-          await this.startGateway();
-        }
-      }, 10000); //TODO: configurable
-
       try {
-        if (this.metadata.dependencies && this.metadata.dependencies.length > 0) {
-          await this.broker.waitForServices(this.metadata.dependencies);
+        await this.broker.waitForServices(this.metadata.dependencies);
 
-          this.updates.push(
-            ...(await this.broker.call('$node.services', { onlyAvailable: true, skipInternal: true }))
-              .filter((service) => service.name !== this.name && service.metadata.types)
-              .map((service) => ({ name: service.name, ...service.metadata }))
-          );
+        this.updates.push(
+          ...(await this.broker.call('$node.services', { onlyAvailable: true, skipInternal: true }))
+            .filter((service) => service.name !== this.name && service.metadata.types)
+            .map((service) => ({ name: service.name, ...service.metadata }))
+        );
 
-          this.updateTypeMap();
-        }
+        this.updateTypeMap();
 
         this.graphqlSchema = await this.buildGraphQLSchema();
 
@@ -78,14 +64,27 @@ export const createGraphQLMixin = function ({ types, resolvers, dependencies = [
           types: this.metadata.types,
           dependencies: this.metadata.dependencies
         });
+
+        this.updateInterval = setInterval(async () => {
+          this.logger.debug('checking for updates');
+          if (this.updates.length > 0) {
+            this.updateTypeMap();
+            this.logger.info(`rebuilding graphql schema`);
+            this.graphqlSchema = await this.buildGraphQLSchema();
+            await this.startGateway();
+          }
+        }, 10000); //TODO: configurable
+
       }
       catch (error) {
         this.logger.error(error);
       }
     },
     async stopped() {
-      this.updateInterval.unref();
-      clearInterval(this.updateInterval);
+      if (this.updateInterval) {
+        this.updateInterval.unref();
+        clearInterval(this.updateInterval);
+      }
       this.logger.info('stopping gateway...');
       await this.gateway.stop();
     }

@@ -5,8 +5,7 @@ const a = createGraphQLMixin({
   types: `
     type A {
       id: ID,
-      value: String,
-      hot: String
+      value: String
     }
     type Query {
       a(id: ID): A
@@ -15,7 +14,7 @@ const a = createGraphQLMixin({
   resolvers: {
     Query: {
       a(_, { id }) {
-        return { id, value: 'hello A', hot: 'hot!' };
+        return { id, value: 'hello A' };
       }
     }
   }
